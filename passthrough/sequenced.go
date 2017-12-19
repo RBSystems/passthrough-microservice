@@ -66,6 +66,7 @@ func SequencedPassthrough(gw, path string, delayInterval int) (int, string, []by
 
 func SequenceWorker(incoming chan request, gw string) {
 	wait := 0
+	timer := time.NewTimer(24 * time.Hour)
 	for {
 		if wait != 0 {
 			log.Printf(color.BlueString("[Worker-%v] Metered connection, waiting for %v milliseconds", gw, wait))
@@ -91,13 +92,20 @@ func SequenceWorker(incoming chan request, gw string) {
 			addr := fmt.Sprintf("http://%v%v", gw, v.Path)
 			log.Printf(color.BlueString("[Worker-%v] forwarding request to %v.", gw, addr))
 
-			resp, err := http.Get(addr)
+			//we need a timeout here.
+			timeout := time.Duration(15 * time.Second)
+			client := http.Client{
+				Timeout: timeout,
+			}
+
+			resp, err := client.Get(addr)
 			if err != nil {
 				msg := fmt.Sprintf("[Worker-%v] Error with passthrough request: %v", gw, err.Error())
 				log.Printf(color.HiBlueString(msg))
 				v.RespChan <- response{0, "", []byte{}, errors.New(msg)}
 				continue
 			}
+			defer resp.Body.Close()
 
 			log.Printf(color.BlueString("[Worker-%v] Done.", gw))
 
@@ -111,6 +119,10 @@ func SequenceWorker(incoming chan request, gw string) {
 			resp.Body.Close()
 
 			v.RespChan <- response{resp.StatusCode, resp.Header.Get("content-type"), body, nil}
+		case <-timer.C:
+			log.Printf(color.HiGreenString("[Worker-%v] timer expired, closing routine.", gw))
+			Routines.Delete(gw)
+			return
 		}
 	}
 }

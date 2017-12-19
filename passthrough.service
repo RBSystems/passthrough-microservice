@@ -1,0 +1,14 @@
+[Unit]
+Description=Passthrough Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/etc/passthrough-service/passthrough-service
+Environment="PI_HOSTNAME=$HOSTNAME"
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

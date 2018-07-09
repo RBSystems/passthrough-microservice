@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/byuoitav/passthrough-microservice/passthrough"
 	"github.com/fatih/color"
@@ -51,6 +52,7 @@ func SimplePassthrough(context echo.Context) error {
 	return context.Blob(resp.StatusCode, resp.Header.Get("content-type"), body)
 }
 
+// SequencedPassthrough i
 func SequencedPassthrough(context echo.Context) error {
 	gw := context.Param("gw")
 	prePath := "/sequenced/" + gw
@@ -64,6 +66,7 @@ func SequencedPassthrough(context echo.Context) error {
 	return context.Blob(code, rType, content)
 }
 
+// MeteredPassthrough i
 func MeteredPassthrough(context echo.Context) error {
 	gw := context.Param("gw")
 	rate := context.Param("rate")
@@ -83,5 +86,32 @@ func MeteredPassthrough(context echo.Context) error {
 	}
 
 	return context.Blob(code, rType, content)
-	return nil
+}
+
+// DelayedPassthrough sends the initial request immediatly, and then delays the /after/ part of the URI, and returns the response from that request.
+func DelayedPassthrough(context echo.Context) error {
+	gw := context.Param("gw")
+	sdelay := context.Param("delay")
+	prePath := fmt.Sprintf("/delayed/%s/%s", sdelay, gw)
+
+	delay, err := time.ParseDuration(sdelay)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("delay must be an integer, was %v", sdelay))
+	}
+
+	fullPath := strings.Replace(context.Request().RequestURI, prePath, "", 1)
+	path := strings.Split(fullPath, "/resp")
+	if len(path) != 2 {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("must include a before and after request"))
+	}
+
+	reqPath := path[0]
+	respPath := path[1]
+
+	content, code, ctype, nerr := passthrough.Delay(gw, reqPath, respPath, delay)
+	if err != nil {
+		return context.JSON(http.StatusInternalServerError, nerr.String())
+	}
+
+	return context.Blob(code, ctype, content)
 }

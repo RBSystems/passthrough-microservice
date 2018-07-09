@@ -53,10 +53,10 @@ func SequencedPassthrough(gw, path string, delayInterval int) (int, string, []by
 	case <-timer.C:
 		//timeout
 		log.Printf(color.HiCyanString("[Passthrough Helper] Timeout, returning"))
-		return 0, "", []byte{}, errors.New("Gateway timed out...")
+		return 0, "", []byte{}, errors.New("gateway timed out")
 	case resp, ok := <-respChan:
 		if !ok {
-			return 0, "", []byte{}, errors.New("Response channel from the worker was closed.")
+			return 0, "", []byte{}, errors.New("response channel from the worker was closed")
 		}
 		return resp.RespCode, resp.ContentType, resp.Content, resp.Error
 	}

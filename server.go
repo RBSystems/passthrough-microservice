@@ -22,6 +22,11 @@ func main() {
 	secure.GET("/sequenced/:gw/*", handlers.SequencedPassthrough)   //Sequence all commands (only allow one out standing request at a time)
 	secure.GET("/metered/:rate/:gw/*", handlers.MeteredPassthrough) //a specific type that requires an entry in the configuration file
 
+	secure.GET("/delayed/:delay/:gw/*/resp/*", handlers.DelayedPassthrough)
+
+	// endpoint to handle the rmc3 responding with an error, even though the input is changing.
+	//	secure.GET("/slowrmc/:delay/:address/input/:input/:output", handlers.SetRMCInput)
+
 	server := http.Server{
 		Addr:           port,
 		MaxHeaderBytes: 1024 * 10,
